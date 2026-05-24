@@ -1,0 +1,16 @@
+ROOT:
+  file: "./data/root.csv"
+
+Create_User:
+  file: "./data/users.xlsx"
+  worksheet: "Users"
+
+Get_Request: "./data/get-request.csv"
+
+Orders_API:
+  file: "./data/orders.xlsx"
+  worksheet: ""
+
+Customer_API:
+  file: "./data/customer.xlsx"
+  worksheet: "Customers"

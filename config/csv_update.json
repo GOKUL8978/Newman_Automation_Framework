@@ -1,0 +1,13 @@
+{
+  "Create Application": {
+    "applicationId": "data.appId",
+    "status": "data.status"
+  },
+  "Creating_Users": {
+    "host": "data.email"
+  },
+  "Get User": {
+    "userName": "user.name",
+    "email": "user.email"
+  }
+}

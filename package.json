@@ -1,0 +1,16 @@
+{
+  "name": "enterprise-newman-framework",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node runner.js",
+    "convert": "node converter.js",
+    "clear": "node clearReports.js"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "newman": "^6.1.0",
+    "newman-reporter-htmlextra": "^1.23.1",
+    "papaparse": "^5.4.1",
+    "xlsx": "^0.18.5"
+  }
+}

@@ -1,0 +1,11 @@
+Create User:
+  userId: "data.id"
+  userName: "data.name"
+
+Get User:
+  customerId: "data.customer.id"
+
+Orders API:
+  orderId: "data.orders[0].id"
+
+Skip API: null

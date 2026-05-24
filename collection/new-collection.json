@@ -1,0 +1,60 @@
+{
+  "info": {
+    "_postman_id": "195c08d3-d723-443a-83f9-c6e664917ebb",
+    "name": "Sample Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29611463"
+  },
+  "item": [
+    {
+      "name": "Create_User",
+      "item": [
+        {
+          "name": "Creating_Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response has same name', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.name).to.eql(pm.iterationData.get('name'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"age\": {{age}}\n}"
+            },
+            "url": {
+              "raw": "https://postman-echo.com/post",
+              "protocol": "https",
+              "host": [
+                "postman-echo",
+                "com"
+              ],
+              "path": [
+                "post"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
