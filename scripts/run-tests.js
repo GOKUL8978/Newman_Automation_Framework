@@ -1,3 +1,8 @@
+// ======================================
+// scripts/run-tests.js
+// FINAL FIXED VERSION
+// ======================================
+
 const fs = require('fs');
 const path = require('path');
 const Papa = require('papaparse');
@@ -97,7 +102,6 @@ const folderCsvMap =
 
 let responseStore = {};
 let resultStore = {};
-let convertedFiles = {};
 
 // ======================================
 // BUILD REQUEST → FOLDER MAP
@@ -158,44 +162,50 @@ fs.mkdirSync(evidenceFolder, {
 });
 
 // ======================================
+// GET CURRENT FOLDER CONFIG ONLY
+// ======================================
+
+let currentFolderConfig = null;
+
+if (
+    targetFolder &&
+    folderCsvMap[targetFolder]
+) {
+
+    currentFolderConfig =
+        getFileConfig(
+            folderCsvMap,
+            targetFolder
+        );
+
+} else if (
+    folderCsvMap['ROOT']
+) {
+
+    currentFolderConfig =
+        getFileConfig(
+            folderCsvMap,
+            'ROOT'
+        );
+}
+
+// ======================================
 // INPUT FILE
 // ======================================
 
 let inputFile = null;
 
-if (
-    targetFolder &&
-    getFileConfig(
-        folderCsvMap,
-        targetFolder
-    ).file
-) {
+if (currentFolderConfig) {
 
     inputFile =
-        getFileConfig(
-            folderCsvMap,
-            targetFolder
-        ).file;
-
-} else if (
-    getFileConfig(
-        folderCsvMap,
-        'ROOT'
-    ).file
-) {
-
-    inputFile =
-        getFileConfig(
-            folderCsvMap,
-            'ROOT'
-        ).file;
+        currentFolderConfig.file;
 }
 
 // ======================================
-// EXCEL → CSV
+// EXCEL → JSON
 // ======================================
 
-function convertExcelToCsv(
+function readExcelData(
     excelPath,
     worksheetName
 ) {
@@ -227,33 +237,13 @@ function convertExcelToCsv(
     const worksheet =
         workbook.Sheets[worksheetName];
 
-    const jsonData =
-        XLSX.utils.sheet_to_json(
-            worksheet,
-            {
-                defval: '',
-                raw: false
-            }
-        );
-
-    const csvData =
-        Papa.unparse(jsonData);
-
-    const tempCsv =
-        excelPath.replace(
-            '.xlsx',
-            '_temp.csv'
-        );
-
-    fs.writeFileSync(
-        tempCsv,
-        csvData
+    return XLSX.utils.sheet_to_json(
+        worksheet,
+        {
+            defval: '',
+            raw: false
+        }
     );
-
-    convertedFiles[excelPath] =
-        tempCsv;
-
-    return tempCsv;
 }
 
 // ======================================
@@ -328,37 +318,37 @@ if (targetFolder) {
 }
 
 // ======================================
-// INPUT DATA FILE
+// INPUT DATA
 // ======================================
 
 if (inputFile) {
-
-    let finalFile =
-        inputFile;
 
     if (
         inputFile.endsWith('.xlsx')
     ) {
 
         const worksheet =
-            getFileConfig(
-                folderCsvMap,
-                targetFolder
-            )?.worksheet;
+            currentFolderConfig?.worksheet;
 
-        finalFile =
-            convertExcelToCsv(
+        newmanOptions.iterationData =
+            readExcelData(
                 inputFile,
                 worksheet
             );
+
+        console.log(
+            `📘 Using Excel File: ${inputFile}`
+        );
+
+    } else {
+
+        newmanOptions.iterationData =
+            inputFile;
+
+        console.log(
+            `📄 Using CSV File: ${inputFile}`
+        );
     }
-
-    newmanOptions.iterationData =
-        finalFile;
-
-    console.log(
-        `📄 Using Data File: ${finalFile}`
-    );
 
 } else {
 
@@ -413,6 +403,18 @@ newman.run(newmanOptions)
     const folderName =
         requestFolderMap[requestName]
         || 'ROOT';
+
+    // ======================================
+    // SKIP OTHER FOLDERS
+    // ======================================
+
+    if (
+        targetFolder &&
+        folderName !== targetFolder
+    ) {
+
+        return;
+    }
 
     const iteration =
         args.cursor.iteration;
@@ -483,37 +485,13 @@ ${responseBody}
             responseStore[folderName][iteration] = {};
         }
 
-        let formattedRequestBody =
-            requestBody;
-
-        try {
-
-            formattedRequestBody =
-                JSON.stringify(
-                    JSON.parse(requestBody)
-                );
-
-        } catch {}
-
-        let formattedResponseBody =
-            responseBody;
-
-        try {
-
-            formattedResponseBody =
-                JSON.stringify(
-                    JSON.parse(responseBody)
-                );
-
-        } catch {}
-
         responseStore[folderName][iteration]
             .requestBody =
-            formattedRequestBody;
+            requestBody;
 
         responseStore[folderName][iteration]
             .responseBody =
-            formattedResponseBody;
+            responseBody;
 
         responseStore[folderName][iteration]
             .responseStatusCode =
@@ -573,6 +551,18 @@ ${responseBody}
                 requestFolderMap[requestName]
                 || 'ROOT';
 
+            // ======================================
+            // SKIP OTHER FOLDERS
+            // ======================================
+
+            if (
+                targetFolder &&
+                folderName !== targetFolder
+            ) {
+
+                return;
+            }
+
             const i =
                 exec.cursor.iteration;
 
@@ -592,35 +582,22 @@ ${responseBody}
                     : 'FAILED';
         });
 
-    await Promise.all(
+    // ======================================
+    // UPDATE ONLY CURRENT FOLDER FILE
+    // ======================================
 
-        Object.keys(folderCsvMap)
-            .map(folderName => {
+    if (
+        currentFolderConfig &&
+        inputFile
+    ) {
 
-                const originalFile =
-                    getFileConfig(
-                        folderCsvMap,
-                        folderName
-                    )?.file;
-
-                if (!originalFile) {
-
-                    return Promise.resolve();
-                }
-
-                const tempCsv =
-                    convertedFiles[originalFile]
-                    || originalFile;
-
-                return updateDataFile(
-                    tempCsv,
-                    responseStore[folderName] || [],
-                    resultStore[folderName] || [],
-                    originalFile,
-                    folderName
-                );
-            })
-    );
+        await updateDataFile(
+            inputFile,
+            responseStore[targetFolder] || [],
+            resultStore[targetFolder] || [],
+            currentFolderConfig
+        );
+    }
 
     console.log('\n🎉 Execution Completed');
 });
@@ -630,158 +607,159 @@ ${responseBody}
 // ======================================
 
 function updateDataFile(
-    csvPath,
+    filePath,
     responseData,
     results,
-    originalFile,
-    folderName
+    config
 ) {
 
     return new Promise(resolve => {
 
-        fs.readFile(
-            csvPath,
-            'utf8',
-            (err, data) => {
+        // ======================================
+        // EXCEL FILE
+        // ======================================
 
-                if (err) {
+        if (
+            filePath.endsWith('.xlsx')
+        ) {
 
-                    console.log(
-                        `❌ Unable to read: ${csvPath}`
-                    );
+            const workbook =
+                XLSX.readFile(filePath);
 
-                    return resolve();
-                }
+            const worksheetName =
+                config.worksheet &&
+                workbook.SheetNames.includes(
+                    config.worksheet
+                )
+                    ? config.worksheet
+                    : workbook.SheetNames[0];
 
-                const parsed =
-                    Papa.parse(data, {
-                        header: true,
-                        skipEmptyLines: true
-                    });
+            const worksheet =
+                workbook.Sheets[worksheetName];
 
-                const cleanData =
-                    parsed.data.filter(row =>
-                        Object.values(row)
-                            .some(v =>
-                                v !== ''
-                            )
-                    );
-
-                cleanData.forEach((row, i) => {
-
-                    row.testResult =
-                        results[i] || '';
-
-                    if (responseData[i]) {
-
-                        Object.keys(responseData[i])
-                            .forEach(key => {
-
-                                row[key] =
-                                    responseData[i][key];
-                            });
+            const jsonData =
+                XLSX.utils.sheet_to_json(
+                    worksheet,
+                    {
+                        defval: '',
+                        raw: false
                     }
-                });
+                );
 
-                const updatedCsv =
-                    Papa.unparse(cleanData, {
-                        quotes: true
+            jsonData.forEach((row, i) => {
+
+                row.testResult =
+                    results[i] || '';
+
+                if (responseData[i]) {
+
+                    Object.keys(responseData[i])
+                        .forEach(key => {
+
+                            row[key] =
+                                responseData[i][key];
+                        });
+                }
+            });
+
+            const updatedWorksheet =
+                XLSX.utils.json_to_sheet(
+                    jsonData
+                );
+
+            workbook.Sheets[worksheetName] =
+                updatedWorksheet;
+
+            XLSX.writeFile(
+                workbook,
+                filePath
+            );
+
+            console.log(
+                `📘 Updated Excel: ${filePath}`
+            );
+
+        }
+
+        // ======================================
+        // CSV FILE
+        // ======================================
+
+        else {
+
+            fs.readFile(
+                filePath,
+                'utf8',
+                (err, data) => {
+
+                    if (err) {
+
+                        console.log(
+                            `❌ Unable to read: ${filePath}`
+                        );
+
+                        return resolve();
+                    }
+
+                    const parsed =
+                        Papa.parse(data, {
+                            header: true,
+                            skipEmptyLines: true
+                        });
+
+                    parsed.data.forEach((row, i) => {
+
+                        row.testResult =
+                            results[i] || '';
+
+                        if (responseData[i]) {
+
+                            Object.keys(responseData[i])
+                                .forEach(key => {
+
+                                    row[key] =
+                                        responseData[i][key];
+                                });
+                        }
                     });
 
-                fs.writeFileSync(
-                    csvPath,
-                    updatedCsv
-                );
-
-                console.log(
-                    `📄 Updated File: ${csvPath}`
-                );
-
-                // ======================================
-                // UPDATE EXCEL
-                // ======================================
-
-                if (
-                    originalFile.endsWith('.xlsx')
-                ) {
-
-                    const csvData =
-                        Papa.parse(
-                            updatedCsv,
-                            {
-                                header: true
-                            }
+                    const updatedCsv =
+                        Papa.unparse(
+                            parsed.data
                         );
 
-                    const worksheet =
-                        XLSX.utils
-                            .json_to_sheet(
-                                csvData.data
-                            );
-
-                    const workbook =
-                        XLSX.utils
-                            .book_new();
-
-                    XLSX.utils
-                        .book_append_sheet(
-                            workbook,
-                            worksheet,
-
-                            getFileConfig(
-                                folderCsvMap,
-                                folderName
-                            )?.worksheet ||
-
-                            'Sheet1'
-                        );
-
-                    XLSX.writeFile(
-                        workbook,
-                        originalFile
+                    fs.writeFileSync(
+                        filePath,
+                        updatedCsv
                     );
 
                     console.log(
-                        `📘 Updated Excel: ${originalFile}`
+                        `📄 Updated CSV: ${filePath}`
                     );
 
-                    // ======================================
-                    // COPY UPDATED EXCEL TO REPORTS
-                    // ======================================
-
-                    const copiedReportFile =
-                        `${reportFolder}/${path.basename(originalFile)}`;
-
-                    fs.copyFileSync(
-                        originalFile,
-                        copiedReportFile
-                    );
-
-                    console.log(
-                        `📄 Copied Updated Excel To Reports: ${copiedReportFile}`
-                    );
-
-                } else {
-
-                    // ======================================
-                    // COPY UPDATED CSV TO REPORTS
-                    // ======================================
-
-                    const copiedReportFile =
-                        `${reportFolder}/${path.basename(originalFile)}`;
-
-                    fs.copyFileSync(
-                        originalFile,
-                        copiedReportFile
-                    );
-
-                    console.log(
-                        `📄 Copied Updated CSV To Reports: ${copiedReportFile}`
-                    );
+                    resolve();
                 }
+            );
 
-                resolve();
-            }
+            return;
+        }
+
+        // ======================================
+        // COPY UPDATED FILE TO REPORTS
+        // ======================================
+
+        const copiedReportFile =
+            `${reportFolder}/${path.basename(filePath)}`;
+
+        fs.copyFileSync(
+            filePath,
+            copiedReportFile
         );
+
+        console.log(
+            `📄 Copied Updated File To Reports`
+        );
+
+        resolve();
     });
 }
