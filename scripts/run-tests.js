@@ -1,6 +1,6 @@
 // ======================================
 // scripts/run-tests.js
-// FINAL FIXED VERSION
+// FINAL ENTERPRISE VERSION
 // ======================================
 
 const fs = require('fs');
@@ -162,7 +162,7 @@ fs.mkdirSync(evidenceFolder, {
 });
 
 // ======================================
-// GET CURRENT FOLDER CONFIG ONLY
+// GET CURRENT FOLDER CONFIG
 // ======================================
 
 let currentFolderConfig = null;
@@ -202,7 +202,7 @@ if (currentFolderConfig) {
 }
 
 // ======================================
-// EXCEL → JSON
+// READ EXCEL DATA
 // ======================================
 
 function readExcelData(
@@ -410,7 +410,8 @@ newman.run(newmanOptions)
 
     if (
         targetFolder &&
-        folderName !== targetFolder
+        folderName !== targetFolder &&
+        requestName !== targetFolder
     ) {
 
         return;
@@ -473,27 +474,36 @@ ${responseBody}
         const res =
             JSON.parse(responseBody);
 
-        if (!responseStore[folderName]) {
+        // ======================================
+        // SUPPORT API NAME + FOLDER NAME
+        // ======================================
 
-            responseStore[folderName] = [];
+        const storeKey =
+            targetFolder === requestName
+                ? targetFolder
+                : folderName;
+
+        if (!responseStore[storeKey]) {
+
+            responseStore[storeKey] = [];
         }
 
         if (
-            !responseStore[folderName][iteration]
+            !responseStore[storeKey][iteration]
         ) {
 
-            responseStore[folderName][iteration] = {};
+            responseStore[storeKey][iteration] = {};
         }
 
-        responseStore[folderName][iteration]
+        responseStore[storeKey][iteration]
             .requestBody =
             requestBody;
 
-        responseStore[folderName][iteration]
+        responseStore[storeKey][iteration]
             .responseBody =
             responseBody;
 
-        responseStore[folderName][iteration]
+        responseStore[storeKey][iteration]
             .responseStatusCode =
             statusCode;
 
@@ -509,7 +519,7 @@ ${responseBody}
                 .forEach(col => {
 
                     responseStore
-                        [folderName]
+                        [storeKey]
                         [iteration]
                         [col] =
 
@@ -557,7 +567,8 @@ ${responseBody}
 
             if (
                 targetFolder &&
-                folderName !== targetFolder
+                folderName !== targetFolder &&
+                requestName !== targetFolder
             ) {
 
                 return;
@@ -571,19 +582,28 @@ ${responseBody}
                     a => !a.error
                 ) ?? true;
 
-            if (!resultStore[folderName]) {
+            // ======================================
+            // SUPPORT API NAME + FOLDER NAME
+            // ======================================
 
-                resultStore[folderName] = [];
+            const storeKey =
+                targetFolder === requestName
+                    ? targetFolder
+                    : folderName;
+
+            if (!resultStore[storeKey]) {
+
+                resultStore[storeKey] = [];
             }
 
-            resultStore[folderName][i] =
+            resultStore[storeKey][i] =
                 passed
                     ? 'PASSED'
                     : 'FAILED';
         });
 
     // ======================================
-    // UPDATE ONLY CURRENT FOLDER FILE
+    // UPDATE DATA FILE
     // ======================================
 
     if (
@@ -737,6 +757,22 @@ function updateDataFile(
                         `📄 Updated CSV: ${filePath}`
                     );
 
+                    // ======================================
+                    // COPY UPDATED CSV
+                    // ======================================
+
+                    const copiedReportFile =
+                        `${reportFolder}/${path.basename(filePath)}`;
+
+                    fs.copyFileSync(
+                        filePath,
+                        copiedReportFile
+                    );
+
+                    console.log(
+                        `📄 Copied Updated CSV To Reports`
+                    );
+
                     resolve();
                 }
             );
@@ -745,7 +781,7 @@ function updateDataFile(
         }
 
         // ======================================
-        // COPY UPDATED FILE TO REPORTS
+        // COPY UPDATED EXCEL
         // ======================================
 
         const copiedReportFile =
@@ -757,9 +793,9 @@ function updateDataFile(
         );
 
         console.log(
-            `📄 Copied Updated File To Reports`
+            `📄 Copied Updated Excel To Reports`
         );
 
         resolve();
     });
-}
+                       }
