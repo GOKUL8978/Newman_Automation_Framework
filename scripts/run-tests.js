@@ -20,11 +20,18 @@ const {
 const framework =
     readProperties('./config/framework.properties');
 
+// ======================================
+// INPUTS
+// ======================================
+
 const targetFolder =
     process.argv[2];
 
+const iterationCount =
+    process.argv[3];
+
 // ======================================
-// LOAD COLLECTION FROM PROPERTIES
+// LOAD COLLECTION
 // ======================================
 
 const collectionPath =
@@ -48,8 +55,8 @@ const collection =
 
 const mappingFile =
     framework.mappingType === 'yaml'
-        ? './config/csv_update.yaml'
-        : './config/csv_update.json';
+        ? './config/mapping.yaml'
+        : './config/mapping.json';
 
 const folderFile =
     framework.mappingType === 'yaml'
@@ -68,7 +75,7 @@ const apiFieldMapping =
                 'utf8'
             )
         )
-        : require('../config/csv_update.json');
+        : require('../config/mapping.json');
 
 // ======================================
 // LOAD FOLDER MAPPING
@@ -286,6 +293,31 @@ const newmanOptions = {
 };
 
 // ======================================
+// ITERATION COUNT
+// ======================================
+
+if (
+    iterationCount !== undefined &&
+    iterationCount !== null &&
+    iterationCount !== '' &&
+    !isNaN(iterationCount)
+) {
+
+    newmanOptions.iterationCount =
+        Number(iterationCount);
+
+    console.log(
+        `🔁 Running ${iterationCount} iterations`
+    );
+
+} else {
+
+    console.log(
+        '🔁 Running ALL iterations'
+    );
+}
+
+// ======================================
 // FOLDER FILTER
 // ======================================
 
@@ -341,7 +373,7 @@ if (inputFile) {
 }
 
 // ======================================
-// SSL CERT SUPPORT
+// SSL SUPPORT
 // ======================================
 
 if (
@@ -399,10 +431,6 @@ newman.run(newmanOptions)
     const statusCode =
         args.response.code;
 
-    // ======================================
-    // PRINT IN TERMINAL
-    // ======================================
-
     console.log('\n================================');
 
     console.log(`API: ${requestName}`);
@@ -443,10 +471,6 @@ ${responseBody}
 `
     );
 
-    // ======================================
-    // PROCESS RESPONSE
-    // ======================================
-
     try {
 
         const res =
@@ -464,10 +488,6 @@ ${responseBody}
             responseStore[folderName][iteration] = {};
         }
 
-        // ======================================
-        // FORMAT REQUEST BODY
-        // ======================================
-
         let formattedRequestBody =
             requestBody;
 
@@ -479,10 +499,6 @@ ${responseBody}
                 );
 
         } catch {}
-
-        // ======================================
-        // FORMAT RESPONSE BODY
-        // ======================================
 
         let formattedResponseBody =
             responseBody;
@@ -496,10 +512,6 @@ ${responseBody}
 
         } catch {}
 
-        // ======================================
-        // STORE DEFAULT FIELDS
-        // ======================================
-
         responseStore[folderName][iteration]
             .requestBody =
             formattedRequestBody;
@@ -511,10 +523,6 @@ ${responseBody}
         responseStore[folderName][iteration]
             .responseStatusCode =
             statusCode;
-
-        // ======================================
-        // API FIELD MAPPING
-        // ======================================
 
         const mapping =
             apiFieldMapping[requestName];
@@ -588,10 +596,6 @@ ${responseBody}
                     ? 'PASSED'
                     : 'FAILED';
         });
-
-    // ======================================
-    // UPDATE DATA FILES
-    // ======================================
 
     await Promise.all(
 
@@ -697,10 +701,6 @@ function updateDataFile(
                 console.log(
                     `📄 Updated File: ${csvPath}`
                 );
-
-                // ======================================
-                // UPDATE EXCEL
-                // ======================================
 
                 if (
                     originalFile.endsWith('.xlsx')
