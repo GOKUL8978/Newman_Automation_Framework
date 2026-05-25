@@ -360,11 +360,6 @@ if (inputFile) {
         `📄 Using Data File: ${finalFile}`
     );
 
-    fs.copyFileSync(
-        inputFile,
-        `${reportFolder}/${path.basename(inputFile)}`
-    );
-
 } else {
 
     console.log(
@@ -702,6 +697,10 @@ function updateDataFile(
                     `📄 Updated File: ${csvPath}`
                 );
 
+                // ======================================
+                // UPDATE EXCEL
+                // ======================================
+
                 if (
                     originalFile.endsWith('.xlsx')
                 ) {
@@ -744,6 +743,40 @@ function updateDataFile(
 
                     console.log(
                         `📘 Updated Excel: ${originalFile}`
+                    );
+
+                    // ======================================
+                    // COPY UPDATED EXCEL TO REPORTS
+                    // ======================================
+
+                    const copiedReportFile =
+                        `${reportFolder}/${path.basename(originalFile)}`;
+
+                    fs.copyFileSync(
+                        originalFile,
+                        copiedReportFile
+                    );
+
+                    console.log(
+                        `📄 Copied Updated Excel To Reports: ${copiedReportFile}`
+                    );
+
+                } else {
+
+                    // ======================================
+                    // COPY UPDATED CSV TO REPORTS
+                    // ======================================
+
+                    const copiedReportFile =
+                        `${reportFolder}/${path.basename(originalFile)}`;
+
+                    fs.copyFileSync(
+                        originalFile,
+                        copiedReportFile
+                    );
+
+                    console.log(
+                        `📄 Copied Updated CSV To Reports: ${copiedReportFile}`
                     );
                 }
 
